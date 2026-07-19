@@ -13,15 +13,16 @@
     "test:db-nosql": "jest tests/db-nosql.test.js",
     "test:js-ts-all": "jest --testPathPatterns=js-ts-task",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:task-09": "jest tests/todo-service.spec.ts --testMatch=\"**/*.spec.ts\" --coverage"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/jest": "^30.0.0",
-    "jest": "^30.0.4",
-    "ts-jest": "^29.1.0"
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11"
   },
   "dependencies": {
     "express": "^5.1.0"
