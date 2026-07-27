@@ -46,11 +46,19 @@ export const ToDoItem: React.FC<TodoItemProps> = ({ todo }) => {
   // Example usage:
   // <ToDoItem todo={{ id: 1, title: 'Learn React', completed: true }} />
 
-  return (
+    let isCompleted = todo.completed;
+    return (
     <div>
       {/* TODO: Replace this with your implementation */}
-      <h4>ToDo Item Component</h4>
-      <p>Implement conditional rendering here</p>
+      {/*<h4>ToDo Item Component</h4>*/}
+      {/*<p>Implement conditional rendering here</p>*/}
+        <h5>{todo.title}</h5>
+        {isCompleted
+            ? <p style={{color: "green", padding: 2}}>Completion status: Completed</p>
+            : <p style={{color: "red", padding: 2, border: "1px solid red"}}>
+                Completion status: Not completed
+            </p>
+        }
     </div>
   );
 }; 

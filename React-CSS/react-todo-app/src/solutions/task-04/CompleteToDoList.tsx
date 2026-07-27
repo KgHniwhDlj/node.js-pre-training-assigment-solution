@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Todo } from '../../types';
+import {ToDoList} from "../task-01/ToDoList";
+import {AddToDo} from "../task-03/AddToDo";
 
 /**
  * Task 4: CompleteToDoList Component
@@ -30,7 +32,7 @@ import { Todo } from '../../types';
  * - Use arrow functions to pass parameters to event handlers
  * - Example: onClick={() => handleClick(id)}
  * - Or use bind: onClick={handleClick.bind(null, id)}
- * 
+ *
  * Key Concepts:
  * - Always create new objects/arrays when updating state
  * - Use spread operator (...) for shallow copies
@@ -56,12 +58,52 @@ export const CompleteToDoList: React.FC = () => {
   //     todo.id === id ? {...todo, completed: true} : todo
   //   ));
   // };
+    const [todos, setTodos] = useState<Todo[]>([]);
+    const [input, setInput] = useState('');
+
+    const handleClick = (id: number)=> {
+        setTodos(
+            todos.map((todo) =>
+            todo.id === id ? {...todo, completed: !todo.completed} : todo)
+        );
+    };
+
+
 
   return (
-    <div>
+    <>
       {/* TODO: Replace this with your implementation */}
-      <h4>Complete ToDo List Component</h4>
-      <p>Implement immutable state updates here</p>
-    </div>
+      {/*<h4>Complete ToDo List Component</h4>*/}
+      {/*<p>Implement immutable state updates here</p>*/}
+        <form onSubmit={(e) => {
+            e.preventDefault()
+            if (!input.trim()) {
+                return;
+            }
+
+            const newTodo: Todo = {
+                id:Date.now(),
+                title: input,
+                completed: false,
+            }
+
+            setTodos([...todos, newTodo]);
+            setInput('');
+
+        }}>
+            <label>
+                <input type="text" value={input} onChange={(e) => setInput(e.target.value)} />
+            </label>
+            <button type="submit">Add Todo</button>
+        </form>
+
+        <ul>
+            {todos.map((todo) =>(
+                <li key={todo.id}>{todo.title} - {todo.completed ? 'Completed' : 'Not Completed'}
+                    <button onClick={() => handleClick(todo.id)}>{todo.completed ? 'Undo' : 'Complete'}</button>
+                </li>
+            ))}
+        </ul>
+    </>
   );
-}; 
+};
