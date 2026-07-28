@@ -1,5 +1,5 @@
-import React from 'react';
-import { ActiveCountProps } from '../../types';
+import React, {useState} from 'react';
+import {ActiveCountProps, Todo} from '../../types';
 
 /**
  * Task 6: ActiveCount Component
@@ -60,11 +60,21 @@ export const ActiveCount: React.FC<ActiveCountProps> = ({ todos }) => {
   // Example display:
   // "0 active todos" or "1 active todo" or "5 active todos"
 
+const activeTodos = todos.filter(todo => !todo.completed).length;
+
   return (
     <div>
       {/* TODO: Replace this with your implementation */}
-      <h4>Active Count Component</h4>
-      <p>Calculate and display active todos count here</p>
+      {/*<h4>Active Count Component</h4>*/}
+      {/*<p>Calculate and display active todos count here</p>*/}
+        {todos.length === 0
+            ? 'No Todos'
+            : activeTodos === 0
+                ? 'All completed'
+                : activeTodos === 1
+                    ? '1 active todo'
+                    : `${activeTodos} active todos`
+        }
     </div>
   );
 }; 

@@ -63,11 +63,62 @@ export const FilteredToDoList: React.FC = () => {
   //   return true; // 'all' case
   // });
 
+    const [todos, setTodos] = useState<Todo[]>([]);
+    const [input, setInput] = useState('');
+    const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+
+    const handleClick = (id: number)=> {
+        setTodos(
+            todos.map((todo) =>
+                todo.id === id ? {...todo, completed: !todo.completed} : todo)
+        );
+    };
+
+    const filteredTodos = todos.filter(todo => {
+          if (filter === 'active') return !todo.completed;
+          if (filter === 'completed') return todo.completed;
+          return true;
+        });
+
   return (
     <div>
       {/* TODO: Replace this with your implementation */}
-      <h4>Filtered ToDo List Component</h4>
-      <p>Implement derived state and filtering here</p>
+      {/*<h4>Filtered ToDo List Component</h4>*/}
+      {/*<p>Implement derived state and filtering here</p>*/}
+        <form onSubmit={(e) => {
+            e.preventDefault()
+            if (!input.trim()) {
+                return;
+            }
+
+            const newTodo: Todo = {
+                id:Date.now(),
+                title: input,
+                completed: false,
+            }
+
+            setTodos([...todos, newTodo]);
+            setInput('');
+
+        }}>
+            <label>
+                <input type="text" placeholder="Add Todo" value={input} onChange={(e) => setInput(e.target.value)} />
+            </label>
+            <button type="submit">Add</button>
+        </form>
+        <button onClick={() => setFilter('all')}>All</button>
+        <button onClick={() => setFilter('active')}>Active</button>
+        <button onClick={() => setFilter('completed')}>Completed</button>
+        <ul>
+            {filteredTodos.map((todo) =>(
+                <li key={todo.id}>
+                    {todo.title} - {todo.completed ? 'Completed' : 'Not Completed'}
+                    <button onClick={() => handleClick(todo.id)}>
+                        {todo.completed ? 'Undo' : 'Complete'}
+                    </button>
+                </li>
+            ))}
+        </ul>
     </div>
   );
 }; 

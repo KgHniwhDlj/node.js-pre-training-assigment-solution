@@ -1,5 +1,6 @@
 import React from 'react';
 import './Card.css';
+import {ToDoList} from "../task-01/ToDoList";
 
 /**
  * Task 9: Card Component
@@ -97,10 +98,11 @@ export const Card: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // }
 
   return (
-    <div>
+    <div className="card">
       {/* TODO: Replace this with your implementation */}
-      <h4>Card Component</h4>
-      <p>Implement component composition with children prop here</p>
+      {/*<h4>Card Component</h4>*/}
+      {/*<p>Implement component composition with children prop here</p>*/}
+        {children}
     </div>
   );
 }; 

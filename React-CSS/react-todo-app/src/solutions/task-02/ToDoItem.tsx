@@ -56,7 +56,7 @@ export const ToDoItem: React.FC<TodoItemProps> = ({ todo }) => {
         {isCompleted
             ? <p style={{color: "green", padding: 2}}>Completion status: Completed</p>
             : <p style={{color: "red", padding: 2, border: "1px solid red"}}>
-                Completion status: Not completed
+                Completion status: Active
             </p>
         }
     </div>

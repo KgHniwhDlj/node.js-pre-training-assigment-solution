@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Todo } from '../../types';
+import {ToDoList} from "../task-01/ToDoList";
 
 /**
  * Task 10: AddToDoForm Component
@@ -100,11 +101,42 @@ export const AddToDoForm: React.FC = () => {
   //   setTitle('');
   // };
 
+    const [todos, setTodos] = useState<Todo[]>([]);
+    const [title, setTitle] = useState('');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!title.trim()) {
+            return;
+        }
+
+        const newTodo: Todo = {
+            id: Date.now(),
+            title: title,
+            completed: false
+        };
+
+        setTodos([...todos, newTodo]);
+        setTitle('');
+
+    }
   return (
     <div>
       {/* TODO: Replace this with your implementation */}
-      <h4>Add ToDo Form Component</h4>
-      <p>Implement controlled form handling here</p>
+      {/*<h4>Add ToDo Form Component</h4>*/}
+      {/*<p>Implement controlled form handling here</p>*/}
+        <form onSubmit={handleSubmit}>
+            <label>
+                <input
+                    type="text"
+                    value={title}
+                    placeholder="Title"
+                    onChange={event => setTitle(event.target.value)}
+                />
+            </label>
+            <button type="submit">Add</button>
+        </form>
+        <ToDoList todos={todos} />
     </div>
   );
 }; 

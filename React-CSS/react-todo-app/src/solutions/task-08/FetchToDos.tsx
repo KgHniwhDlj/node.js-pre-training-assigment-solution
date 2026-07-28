@@ -89,11 +89,51 @@ export const FetchToDos: React.FC = () => {
   //     });
   // }, []);
 
+    const [todos, setTodos] = useState<Todo[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        fetch('https://jsonplaceholder.typicode.com/todos')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch todos');
+                }
+                return response.json();
+            })
+            .then(data => {
+                setTodos(data.slice(0, 5));
+                setLoading(false);})
+            .catch(err => {
+                setError(err.message);
+                setLoading(false);
+            });
+    }, []);
+
+    if (loading) {
+        return <p>Loading...</p>;
+    }
+
+    if (error) {
+        return (<div>
+            `Error: ${error}`
+        </div>)
+    }
+
   return (
     <div>
       {/* TODO: Replace this with your implementation */}
-      <h4>Fetch ToDos Component</h4>
-      <p>Implement data fetching with useEffect here</p>
+      {/*<h4>Fetch ToDos Component</h4>*/}
+      {/*<p>Implement data fetching with useEffect here</p>*/}
+        <ul>
+            {todos.map((todo) => {
+                return (
+                    <li key={todo.id}>
+                        {todo.title}: {todo.completed ? 'Completed' : 'Active'}
+                    </li>
+                )
+            })}
+        </ul>
     </div>
   );
 }; 

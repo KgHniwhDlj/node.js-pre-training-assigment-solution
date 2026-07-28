@@ -1,6 +1,7 @@
 import React from 'react';
 import TaskWrapper from './TaskWrapper';
 import { Card } from '../solutions/task-09/Card';
+import {ToDoList} from "../solutions/task-01/ToDoList";
 
 const Task09: React.FC = () => (
   <TaskWrapper title="Task 9: Card Component">
@@ -8,6 +9,11 @@ const Task09: React.FC = () => (
       <h3>Card Content</h3>
       <p>This is content wrapped in a Card component.</p>
       <button>Click me</button>
+        <ToDoList todos={[
+            { id: 1, title: 'Learn React', completed: false },
+            { id: 2, title: 'Build Todo App', completed: true },
+            { id: 3, title: 'Write Tests', completed: false }
+        ]} />
     </Card>
   </TaskWrapper>
 );

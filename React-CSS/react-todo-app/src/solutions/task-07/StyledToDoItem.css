@@ -1,13 +1,15 @@
 .todo-item {
   padding: 10px;
   margin: 5px 0;
-  border: 1px solid #ddd;
+  border: 1px solid #391127;
+  color: #391127;
   border-radius: 4px;
-  background-color: #f9f9f9;
+  background-color: #ffeef8;
 }
 
 .todo-item.completed {
   background-color: #e8f5e8;
   text-decoration: line-through;
-  color: #666;
+  border-color: #555c55;
+  color: #555c55;
 } 

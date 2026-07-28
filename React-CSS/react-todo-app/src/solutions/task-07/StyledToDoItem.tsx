@@ -70,11 +70,14 @@ export const StyledToDoItem: React.FC<TodoItemProps> = ({ todo }) => {
   // .todo-item { /* base styles */ }
   // .todo-item.completed { /* completed styles */ }
 
+    const itemClass = `todo-item ${todo.completed ? 'completed' : ''}`;
+
   return (
-    <div>
+    <div className={itemClass}>
       {/* TODO: Replace this with your implementation */}
-      <h4>Styled ToDo Item Component</h4>
-      <p>Implement conditional styling here</p>
+      {/*<h4>Styled ToDo Item Component</h4>*/}
+      {/*<p>Implement conditional styling here</p>*/}
+        <p>{todo.title}: {todo.completed ? 'Completed' : 'Active'}</p>
     </div>
   );
 }; 
