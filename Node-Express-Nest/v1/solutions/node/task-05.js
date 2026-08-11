@@ -6,9 +6,10 @@
  * Implement all TODOs below.
  */
 
-const http = require("http");
+ const http = require("http");
 const url = require("url");
 const { EventEmitter } = require("events");
+const https = require("node:https");
 
 // ---------- Utilities ----------
 
@@ -66,24 +67,48 @@ class AnalyticsTracker {
     // TODO: implement daily stats tracking
     // - use YYYY-MM-DD date keys
     // - track created, updated, deleted, views per day
+    const today = new Date().toISOString().split("T")[0];
+
+    if (!this.stats.dailyStats[today]) {
+      this.stats.dailyStats[today] = {
+        created:  0,
+        updated:  0,
+        deleted:  0,
+        views:  0
+      }
+    }
+
+    if (this.stats.dailyStats[today][field] !== undefined) {
+      this.stats.dailyStats[today][field]++;
+    }
   }
   trackCreated() {
     // TODO: implement tracking logic
+    this.stats.totalCreated++;
+    this._bumpDaily("created")
   }
   trackUpdated() {
     // TODO: implement tracking logic
+    this.stats.totalUpdated++;
+    this._bumpDaily("updated")
   }
   trackDeleted() {
     // TODO: implement tracking logic
+    this.stats.totalDeleted++;
+    this._bumpDaily("deleted")
   }
   trackViewed() {
     // TODO: implement tracking logic
+    this.stats.totalViews++;
+    this._bumpDaily("views")
   }
   trackError() {
     // TODO: implement tracking logic
+    this.stats.errors++;
   }
   getStats() {
     // TODO: implement stats retrieval
+    return this.stats
   }
 }
 
@@ -140,6 +165,51 @@ function validateTodoPayload(payload, isCreate = false) {
   // - title: required, non-empty string
   // - description: optional, string
   // - completed: optional, boolean (default false)
+  if (!payload || typeof payload !== "object") {
+    return { errors: ["Invalid payload format"], values: out };
+  }
+
+  if (!isCreate) {
+    if (payload.title !== undefined) {
+      if (typeof payload.title !== "string" || payload.title === "") {
+        errors.push("title must be a string and cannot be whitespace only");
+      } else if (payload.title.length > 100) {
+        errors.push("title can't be more than 100");
+      } else {
+        out.title = payload.title.trim();
+      }
+    }
+  } else {
+    if (typeof payload.title !== "string" || payload.title === "") {
+      errors.push("title must be a string and cannot be whitespace only");
+    } else if (payload.title.length > 100) {
+      errors.push("title can't be more than 100");
+    } else {
+      out.title = payload.title.trim();
+    }
+  }
+
+  if (payload.description !== undefined) {
+    if (typeof payload.description !== "string") {
+      errors.push("description must be a string");
+    } else if (payload.description.length > 500) {
+      errors.push("description can't be more than 500");
+    } else {
+      out.description = payload.description.trim();
+    }
+  } else if (isCreate) {
+    out.description = "";
+  }
+
+  if (payload.completed !== undefined) {
+    if (typeof payload.completed !== "boolean") {
+      errors.push("completed must be a boolean");
+    } else {
+      out.completed = payload.completed;
+    }
+  } else if (isCreate) {
+    out.completed = false;
+  }
 
   return { errors, values: out };
 }
@@ -152,8 +222,12 @@ class TodoServer extends EventEmitter {
     this.nextId = 1;
 
     // TODO: initialize analytics tracker
+    this.analytics = new AnalyticsTracker();
     // TODO: initialize logger
+    this.logger = new ConsoleLogger();
     // TODO: initialize recent events list keeping last 100 events
+    this.recentEvents = [];
+    this.maxEvents = 100;
     this.server = null;
 
     this._wireDefaultListeners();
@@ -161,7 +235,7 @@ class TodoServer extends EventEmitter {
 
   _wireDefaultListeners() {
     const remember = (eventType) => (data) => {
-      this.recentEvents.push({ eventType, timestamp: nowISO(), data });
+      this.recentEvents.push({eventType, timestamp: nowISO(), data});
       if (this.recentEvents.length > 100) this.recentEvents.shift();
     };
     // Remember all key events for /events
@@ -201,6 +275,35 @@ class TodoServer extends EventEmitter {
   async start() {
     // TODO: create HTTP server and bind request handler
     // TODO: listen on this.port
+    return new Promise((resolve, reject) => {
+      this.server = http.createServer((req, res) => {
+        this._handleRequest(req, res).catch((err) => {
+          this.emit("serverError", {
+            errors: err,
+            operation: "handleRequest",
+            requestInfo: {
+              method: req.method,
+              url: req.url,
+              userAgent: req.headers["user-agent"] || "unknown",
+              ip: req.socket ? req.socket.remoteAddress : "unknown",
+            },
+          });
+          sendJson(res, 400, {
+            success: false,
+            error: "Invalid request data"
+          });
+        });
+
+      })
+      this.server.on("error", (err) => {
+        reject(err);
+      });
+
+      this.server.listen(this.port, () => {
+        console.log("Server started on port", this.port);
+        resolve();
+      });
+    });
   }
 
   /**
@@ -208,6 +311,19 @@ class TodoServer extends EventEmitter {
    */
   async stop() {
     // TODO: stop the HTTP server if running
+    if (this.server === null) {
+      return;
+    }
+    return new Promise((resolve, reject) => {
+      this.server.close((err) => {
+        if (err) {
+          reject(err);
+        }
+
+        this.server = null;
+        resolve();
+      });
+    })
   }
 
   /**
@@ -222,7 +338,180 @@ class TodoServer extends EventEmitter {
     // - /events (GET)
     // TODO: emit events for CRUD, errors, validation, etc.
     // TODO: send JSON responses with proper status codes
+
+    const parsedUrl = url.parse(req.url, true);
+    const pathname = parsedUrl.pathname;
+    const method = req.method.toUpperCase();
+
+    const requestInfo = {
+      method,
+      url: req.url,
+      userAgent: req.headers["user-agent"] || "unknown",
+      ip: req.socket ? req.socket.remoteAddress : "unknown",
+    }
+
+    if (method === "OPTIONS") {
+      res.writeHead(204, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      });
+      return res.end();
+    }
+    if (method === "GET" && pathname === "/analytics") {
+      return sendJson(res, 200, {
+        success: true,
+        data: this.analytics.getStats(),
+      })
+    } else if (method === "GET" && pathname === "/events") {
+      const limit = parsedUrl.query.limit ? parseInt(parsedUrl.query.limit, 10) : this.recentEvents.length;
+      const events = this.recentEvents.slice(-limit);
+      return sendJson(res, 200, {
+        success: true,
+        data: events,
+      });
+    }
+
+    if (pathname === "/todos") {
+      if (method === "GET") {
+        const filters = parsedUrl.query;
+        let result = [...this.todos];
+        if (parsedUrl.query.completed !== undefined) {
+          const isCompleted = parsedUrl.query.completed === "true";
+          result = result.filter(t => t.completed === isCompleted);
+        }
+        this.emit("todosListed", {
+          todos: result,
+          count: result.length,
+          filters: filters,
+          timestamp: nowISO(),
+        });
+        return sendJson(res, 200, {
+          success: true,
+          data: result,
+          count: result.length
+        })
+      } else if (method === "POST") {
+        let body ={}
+        try {
+          body = await parseBody(req);
+          const { errors, values } = validateTodoPayload(body, true)
+
+          const newTodo = {
+            id: this.nextId++,
+            ...values,
+            createdAt: nowISO(),
+            updatedAt: nowISO()
+          }
+          this.todos.push(newTodo)
+          this.emit("todoCreated", {
+            todo: newTodo,
+            timestamp: nowISO(),
+            requestInfo,
+
+          })
+          return sendJson(res, 201, {
+            success: true,
+            data: newTodo })
+
+        } catch (e) {
+          const { errors, values } = validateTodoPayload(body, true)
+          this.emit("validationError", {
+            errors,
+            data: body,
+            requestInfo
+          });
+          return sendJson(
+              res, 400, {
+                success: false,
+                errors
+              })
+        }
+        }
+
+    }
+    const id = parseIdFromPath(pathname);
+    if (id !== null) {
+      const todoIndex = this.todos.findIndex(t => t.id === id);
+      const existingTodo = this.todos[todoIndex];
+
+      if (!existingTodo) {
+        this.emit("todoNotFound", {
+          todoId: id,
+          operation: method,
+          timestamp: nowISO(),
+        })
+        return sendJson(res, 404, {success: false, error: "Todo not found"})
+      }
+
+        if (method === "GET") {
+          this.emit("todoViewed", {
+            todo: existingTodo,
+            timestamp: nowISO(),
+            requestInfo
+          })
+          return sendJson(res, 200, {
+            success: true,
+            data: existingTodo
+          })
+        } else if (method === "PUT") {
+          let body = {}
+          try {
+            body = await parseBody(req)
+            const validation = validateTodoPayload(body, false)
+
+            const oldTodo = { ...existingTodo };
+            const changes = Object
+                .keys(validation.values)
+                .filter((k) => validation.values[k] !== existingTodo[k]);
+
+            Object.assign(existingTodo, validation.values, {updatedAt: nowISO()})
+
+            this.emit("todoUpdated", {
+              oldTodo,
+              newTodo: existingTodo,
+              changes,
+              timestamp: nowISO(),
+            })
+            return sendJson(res, 200, {
+              success: true,
+              data: existingTodo
+            })
+
+          } catch (e) {
+            const validation = validateTodoPayload(body, false)
+            this.emit("validationError", {
+              errors: validation.errors,
+              data: body,
+              requestInfo
+            })
+            return sendJson(
+                res, 400, {
+                  success: false,
+                  validationErrors: validation.errors
+                })
+          }
+
+        } else if (method === "DELETE") {
+          this.todos.splice(todoIndex, 1)
+          this.emit("todoDeleted", {
+            todo: existingTodo,
+            timestamp: nowISO(),
+            requestInfo
+          })
+          return sendJson(res, 200, {
+            success: true,
+            data: existingTodo
+          })
+        }
+
+
+    }
+
+    return sendJson(res, 404, { success: false, error: "Route not found" });
   }
+
+
 }
 
 module.exports = { TodoServer };

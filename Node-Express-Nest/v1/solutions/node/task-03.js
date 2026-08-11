@@ -19,12 +19,33 @@ function analyzeEventLoop() {
   // 4. Return analysis object with explanations
 
   const analysis = {
-    phases: [],
-    executionOrder: [],
-    explanations: [],
+    phases: [
+      "timers phase: runs setTimeout() and setInterval() callbacks",
+      "pending callbacks phase: executes callbacks for some system operations such as types of TCP errors",
+      "idle, prepare phase: only used internally by Node.js",
+      "poll phase: waits for and processes I/O (file reads, sockets)",
+      "check phase: runs setImmediate() callbacks",
+      "close callbacks phase: runs on closing sockets/streams (socket.on('close'))"
+    ],
+    executionOrder: [
+      "1. Synchronous Code",
+      "2. process.nextTick Queue (microtask)",
+      "3. Promise Microtask Queue (microtask)",
+      "4. Timers Phase (macrotask)",
+      "5. Pending Callbacks Phase (macrotask)",
+      "6. Poll Phase (macrotask)",
+      "7. Check Phase (macrotask)",
+      "8. Close Callbacks Phase (macrotask)"
+    ],
+    explanations: [
+      "Synchronous code runs before processing any async events or event loop phases",
+      "Microtasks (process.nextTick and Promises) run after current operation completes",
+      "process.nextTick microtask queue has higher priority than Promise microtask queue",
+      "Macrotasks are processed phase by phase in the Node.js event loop lifecycle"
+    ],
   };
 
-  console.log("Event loop analysis not implemented yet");
+  //console.log("Event loop analysis not implemented yet");
   return analysis;
 }
 
@@ -42,9 +63,31 @@ function predictExecutionOrder(snippet) {
 
   const predictions = {
     snippet1: [
+        '1. "Start" - synchronous console.log',
+        '2. "End" - synchronous console.log',
+        '3. "NextTick 1" - process.nextTick (microtask)',
+        '4. "NextTick 2" - process.nextTick (microtask)',
+        '5. "Promise 1" - promise.then (microtask)',
+        '6. "Promise 2" - promise.then (microtask)',
+        '7. "Timer 1" - setTimeout (macrotask, Timer Phase)',
+        '8. "Timer 2" - setTimeout (macrotask, Timer Phase)',
+        '9. "Immediate 1" - setImmediate (macrotask, Check Phase)',
+        '10. "Immediate 2" - setImmediate (macrotask, Check Phase)',
       // Basic event loop snippet predictions
     ],
     snippet2: [
+        '1. "=== Start ===" - synchronous console.log',
+        '2. "=== End ===" - synchronous console.log',
+        '3. "NextTick" - process.nextTick, console.log (microtask)',
+        '4. "Nested NextTick" - process.nextTick, process.nextTick (microtask)',
+        '5. "Timer" - setTimeout, console.log (Timer Phase)',
+        '6. "NextTick in Timer" - setTimeout, process.nextTick (microtask in Timer Phase)',
+        '7. "Immediate" - setImmediate, console.log (Check Phase)',
+        '8. "NextTick in Immediate" - setImmediate, process.nextTick (microtask in Check Phase)',
+        '9. "fs.readFile" - fs.readFile, console.log (Poll Phase)',
+        '10. "NextTick in readFile" - fs.readFile, process.nextTick (microtask in Poll Phase)',
+        '11. "Immediate in readFile" - fs.readFile, setImmediate (Check Phase immediately following Poll phase)',
+        '12. "Timer in readFile" - fs.readFile, setTimeout (Timers Phase after Check Phase)',
       // File system operations snippet predictions
     ],
   };
@@ -68,8 +111,19 @@ async function fixRaceCondition() {
 
   try {
     // Implementation goes here
-    console.log("Race condition fix not implemented yet");
-    return [];
+    //console.log("Race condition fix not implemented yet");
+    const results = await Promise.all(
+        files.map(async (file) => {
+          try {
+            const content = await fsPromises.readFile(file, "utf8");
+            return String(content).toUpperCase();
+          } catch (err) {
+            await fsPromises.writeFile(file, `Content of ${file}`);
+            return `${file.toUpperCase()}`;
+          }
+        })
+    )
+    return results;
   } catch (error) {
     throw new Error(`Failed to process files: ${error.message}`);
   }
@@ -88,15 +142,50 @@ async function fixCallbackHell(userId) {
   // 3. Repetitive error handling code
   // 4. No file existence checking
   // 5. Blocking operations
+  const userPath = `user-${userId}.json`;
+  const prefPath = `preferences-${userId}.json`;
+  const actPath = `activity-${userId}.json`;
 
   try {
+    if (!fs.existsSync(userPath)) {
+      throw new Error(`User file ${userPath} does not exist`);
+    } else if (!fs.existsSync(prefPath)) {
+      throw new Error(`User file ${prefPath} does not exist`);
+    } else if (!fs.existsSync(actPath)) {
+      throw new Error(`User file ${actPath} does not exist`);
+    }
+
+    const readAndParse = async (filePath) => {
+      const raw = await fsPromises.readFile(filePath, "utf8");
+      try {
+        return JSON.parse(String(raw));
+      } catch (err) {
+        throw new Error(`JSON parse error in ${filePath}`);
+      }
+    }
+
+    const [userData, prefData, actData] = await Promise.all([
+        readAndParse(userPath),
+        readAndParse(prefPath),
+        readAndParse(actPath)
+    ])
+
+    const combinedUserData = {
+      ...userData,
+      ...prefData,
+      ...actData,
+      processedAt: new Date()
+    }
+
+    await fsPromises.writeFile(`processed-${userId}.json`,
+        JSON.stringify(combinedUserData, null, 2));
     // Step 1: Read user file
     // Step 2: Read user preferences
     // Step 3: Read user activity
     // Step 4: Combine data and write result
 
-    console.log("Callback hell fix not implemented yet");
-    return null;
+    //console.log("Callback hell fix not implemented yet");
+    return combinedUserData;
   } catch (error) {
     throw new Error(`Failed to process user data: ${error.message}`);
   }
@@ -113,10 +202,32 @@ async function fixMixedAsync() {
   // 2. Nested async operations without proper chaining
   // 3. Error handling inconsistencies
   // 4. No proper async/await usage
+  const inputPath = "input.txt";
+  const outputPath = "output.txt";
+
 
   try {
+    let data;
     // Implementation goes here
-    console.log("Mixed async fix not implemented yet");
+    if (!fs.existsSync(inputPath)) {
+      try {
+        data = await fsPromises.readFile(inputPath, "utf8");
+        logWithPhase("Input file read completed for processing", "poll");
+      } catch (e) {
+        data = "Hello, World!";
+        await fsPromises.writeFile(inputPath, data);
+        logWithPhase("Input file created with initial processing data", "poll");
+      }
+    }
+    let processedData = String(data).toUpperCase();
+
+    await fsPromises.writeFile(outputPath, processedData);
+    logWithPhase("Async processing result written to output file", "poll");
+
+    const checkContent = await fsPromises.readFile(outputPath, "utf8");
+    logWithPhase(`Completed result verified with length ${String(checkContent).length}`, "poll");
+
+    return String(checkContent);
   } catch (error) {
     throw new Error(`Failed to process data: ${error.message}`);
   }
@@ -134,8 +245,33 @@ async function demonstrateEventLoop() {
   // 4. Show check phase (setImmediate)
   // 5. Show close callbacks phase
   // 6. Demonstrate microtask priority (nextTick, Promises)
+  logWithPhase("Demonstrate event loop", "sync");
 
-  console.log("Event loop demonstration not implemented yet");
+  setTimeout(() => {
+    logWithPhase("Timer Callback in Timers Phase", "timers");
+  });
+
+  setImmediate(() => {
+    logWithPhase("setImmediate Callback in Check Phase", "check");
+  });
+
+  process.nextTick(() => {
+    logWithPhase("NextTick in Microtask Queue", "nextTick");
+  });
+
+  Promise.resolve().then(() => {
+    logWithPhase("Promise.then executed in Promise Microtask Queue", "promise");
+  });
+
+  try {
+    await fsPromises.readFile(__filename, () => {
+      logWithPhase("I/O operation completed in Poll Phase", "poll");
+    });
+  } catch (error) {
+    throw new Error(`Failed to process result in ${error.message}`);
+  }
+
+  //console.log("Event loop demonstration not implemented yet");
 }
 
 /**
@@ -171,7 +307,12 @@ async function createTestFiles() {
 
   try {
     // Implementation goes here
-    console.log("Test files creation not implemented yet");
+    for (const [filename, content] of Object.entries(testData)) {
+      const data = typeof content === "object" ? JSON.stringify(content, null, 2) : content;
+      await fsPromises.writeFile(filename, data);
+    }
+    logWithPhase("Test files created successfully", "sync");
+    //console.log("Test files creation not implemented yet");
   } catch (error) {
     console.error("Failed to create test files:", error.message);
   }
@@ -188,8 +329,20 @@ function logWithPhase(message, phase = "unknown") {
   // 2. Add event loop phase information
   // 3. Add color coding for different phases
   // 4. Format output for better readability
+  const timestamp = new Date().toISOString();
 
-  console.log(`[${phase}] ${message}`);
+  const colors = {
+    sync: "\x1b[36m",
+    nextTick: "\x1b[35m",
+    timers: "\x1b[32m",
+    poll: "\x1b[33m",
+    check: "\x1b[34m",
+    promise: "\x1b[37m",
+    reset: "\x1b[0m"
+  };
+  const color = colors[phase.toUpperCase()] || colors.reset;
+
+  console.log(`${color}${timestamp}: [PHASE: ${phase}] ${message}`);
 }
 
 // Export functions and data
